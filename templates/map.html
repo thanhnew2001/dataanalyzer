@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Member Map</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            height: 600px; /* Set map height */
+            width: 100%; /* Set map width */
+        }
+        .container {
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Interactive Map of Members</h1>
+        <p>This map visualizes the geographical distribution of members based on data from a CSV or Excel file.</p>
+        <input type="file" id="fileInput" accept=".csv,.xlsx" />
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <!-- PapaParse JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <!-- SheetJS JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
+    
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([20, 0], 2); // Set initial view
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Function to add markers to the map
+        function addMarkers(members) {
+            members.forEach(member => {
+                const { Country, Region, EngagementScore } = member;
+
+                // Get latitude/longitude (dummy data for demo)
+                let latLng = getLatLngByCountry(Country);
+
+                // Create a marker
+                const marker = L.marker(latLng).addTo(map);
+                marker.bindPopup(`<strong>${Region ? Region : ''}, ${Country}</strong><br>Engagement Score: ${EngagementScore}`);
+            });
+        }
+
+        // Function to get lat/lng based on the country (dummy coordinates for demo)
+        function getLatLngByCountry(country) {
+            const countryCoordinates = {
+                "USA": [37.1, -95.7],
+                "Canada": [56.1, -106.3],
+                "Mexico": [23.6, -102.6],
+                "UK": [55.4, -3.4],
+                "Australia": [-25.3, 133.8],
+                "Germany": [51.1, 10.4],
+                "France": [46.6, 1.9],
+                "India": [20.6, 78.9],
+                "China": [35.8, 104.2],
+                "South Africa": [-30.6, 22.9],
+                // Add more countries and their coordinates as needed
+            };
+            return countryCoordinates[country] || [20, 0]; // Default to world view if country not found
+        }
+
+        // File input change event listener
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const fileType = file.name.split('.').pop().toLowerCase();
+                if (fileType === 'csv') {
+                    // If the file is a CSV
+                    Papa.parse(file, {
+                        header: true,
+                        complete: function(results) {
+                            const members = results.data;
+                            addMarkers(members);
+                        },
+                        error: function(error) {
+                            console.error('Error parsing CSV:', error);
+                        }
+                    });
+                } else if (fileType === 'xlsx') {
+                    // If the file is an Excel file
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+
+                        // Convert array of arrays into array of objects
+                        const headers = jsonData[0]; // Get the headers
+                        const members = jsonData.slice(1).map(row => {
+                            return headers.reduce((acc, header, index) => {
+                                acc[header] = row[index];
+                                return acc;
+                            }, {});
+                        });
+
+                        addMarkers(members);
+                    };
+                    reader.readAsArrayBuffer(file);
+                } else {
+                    alert("Unsupported file format. Please upload a CSV or Excel file.");
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Excel File</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Upload an Excel File</h1>
+        <form id="uploadForm" enctype="multipart/form-data" class="mb-4">
+            <div class="form-group">
+                <label for="file">Choose an Excel file:</label>
+                <input type="file" class="form-control-file" id="file" name="file" accept=".xlsx" required>
+            </div>
+            <div class="form-group">
+                <label for="question">Ask a statistical question:</label>
+                <input type="text" class="form-control" id="question" name="question" placeholder="Ask a statistical question..." required>
+            </div>
+            <button type="submit" class="btn btn-primary">Upload and Ask</button>
+        </form>
+
+        <h2>Questions and Answers</h2>
+        <div id="qa-container" class="border rounded p-3">
+            <!-- Q&A will be dynamically appended here -->
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        $(document).ready(function() {
+            let formSubmitted = false;
+
+            $('#uploadForm').on('submit', function(e) {
+                e.preventDefault(); // Prevent the default form submission
+
+                const formData = new FormData(this);
+
+                // If form has already been submitted, do not send the file again
+                if (!formSubmitted) {
+                    // Send the file to the server
+                    $.ajax({
+                        type: 'POST',
+                        url: '/upload',
+                        data: formData,
+                        contentType: false,
+                        processData: false,
+                        success: function(response) {
+                            // Append the response to the Q&A container
+                            const question = $('#question').val();
+                            const qaDiv = `<div class="mb-2"><strong>Question:</strong> ${question} <br> <strong>Answer:</strong> ${response}</div>`;
+                            $('#qa-container').append(qaDiv);
+                            $('#question').val(''); // Clear the question input
+                        },
+                        error: function(err) {
+                            alert('Error: ' + err.responseText);
+                        }
+                    });
+
+                    formSubmitted = true; // Prevent further file uploads
+                } else {
+                    // Only ask new questions
+                    const question = $('#question').val();
+                    $.post('/upload', { question: question }, function(response) {
+                        const qaDiv = `<div class="mb-2"><strong>Question:</strong> ${question} <br> <strong>Answer:</strong> ${response}</div>`;
+                        $('#qa-container').append(qaDiv);
+                        $('#question').val(''); // Clear the question input
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+
