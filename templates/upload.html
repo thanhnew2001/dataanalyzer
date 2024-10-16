@@ -34,48 +34,55 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
-        $(document).ready(function() {
-            let formSubmitted = false;
+       
+       $(document).ready(function() {
+    let formSubmitted = false;
 
-            $('#uploadForm').on('submit', function(e) {
-                e.preventDefault(); // Prevent the default form submission
+    $('#uploadForm').on('submit', function(e) {
+        e.preventDefault(); // Prevent the default form submission
 
-                const formData = new FormData(this);
+        const formData = new FormData(this);
 
-                // If form has already been submitted, do not send the file again
-                if (!formSubmitted) {
-                    // Send the file to the server
-                    $.ajax({
-                        type: 'POST',
-                        url: '/upload',
-                        data: formData,
-                        contentType: false,
-                        processData: false,
-                        success: function(response) {
-                            // Append the response to the Q&A container
-                            const question = $('#question').val();
-                            const qaDiv = `<div class="mb-2"><strong>Question:</strong> ${question} <br> <strong>Answer:</strong> ${response}</div>`;
-                            $('#qa-container').append(qaDiv);
-                            $('#question').val(''); // Clear the question input
-                        },
-                        error: function(err) {
-                            alert('Error: ' + err.responseText);
-                        }
-                    });
-
-                    formSubmitted = true; // Prevent further file uploads
-                } else {
-                    // Only ask new questions
+        // If form has already been submitted, do not send the file again
+        if (!formSubmitted) {
+            // Send the file to the server
+            $.ajax({
+                type: 'POST',
+                url: '/upload',
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function(result) {
+                    // Directly use result since it's already a JSON object
+                    if (result.success) {
+                        formSubmitted = true; // Prevent further file uploads
+                    }
                     const question = $('#question').val();
-                    $.post('/upload', { question: question }, function(response) {
-                        const qaDiv = `<div class="mb-2"><strong>Question:</strong> ${question} <br> <strong>Answer:</strong> ${response}</div>`;
-                        $('#qa-container').append(qaDiv);
-                        $('#question').val(''); // Clear the question input
-                    });
+                    const qaDiv = `<div class="mb-2"><strong>Question:</strong> ${question} <br> <strong>Answer:</strong> ${result.answer}</div>`;
+                    $('#qa-container').append(qaDiv);
+                    $('#question').val(''); // Clear the question input
+                },
+                error: function(err) {
+                    alert('Error: ' + err.responseText);
                 }
             });
-        });
+        } else {
+            // Ask new questions without uploading the file again
+            const question = $('#question').val();
+            $.post('/ask', { question: question }, function(result) {
+                if (result.success) {
+                    const qaDiv = `<div class="mb-2"><strong>Question:</strong> ${question} <br> <strong>Answer:</strong> ${result.answer}</div>`;
+                    $('#qa-container').append(qaDiv);
+                    $('#question').val(''); // Clear the question input
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            }, 'json'); // Ensure the response is treated as JSON
+        }
+    });
+});
+
+
     </script>
 </body>
 </html>
-
